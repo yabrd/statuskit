@@ -160,7 +160,7 @@ const parseArgs = () => {
       options.from = arg.split('=')[1].trim();
       return;
     }
-    if (arg.startsWith('--to=')) {
+    if (arg.startsWith('--to=') || arg.startsWith('--domain=')) {
       options.to = arg.split('=')[1].trim();
       return;
     }
@@ -173,8 +173,14 @@ const parseArgs = () => {
       if (!Number.isNaN(parsedPort)) options.port = parsedPort;
       return;
     }
-    if (!arg.startsWith('--') && !options.target) {
-      options.target = arg;
+    if (!arg.startsWith('--')) {
+      if (!options.to && (options.action === 'migration' || options.type === 'migration')) {
+        options.to = arg.trim();
+        return;
+      }
+      if (!options.target) {
+        options.target = arg;
+      }
     }
   });
 
