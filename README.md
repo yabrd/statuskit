@@ -14,31 +14,31 @@ Universal, minimalist, and responsive standby, maintenance, and migration status
 ## Installation
 
 ```bash
-npm install github:yabrd/statuskit
+npm install git+https://github.com/yabrd/statuskit.git --save-dev
 ```
 
-## CLI Usage
+## CLI Usage (State Engine)
 
-### Interactive Wizard
-Run without arguments to interactively choose and configure your pages:
+### Switch Maintenance Mode
+Turn ON maintenance mode (automatically backs up original `index.html` to `index.app.html` and activates maintenance):
 ```bash
-npx statuskit
+npx @yabrd/statuskit down
 ```
 
-### Direct Commands
-Install maintenance page and cable assets into `./public`:
+Restore original live application:
 ```bash
-npx statuskit maintenance
+npx @yabrd/statuskit up
 ```
 
-Install migration page and diagram assets (new domain `--to` is required):
+Check current state (`LIVE`, `MAINTENANCE`, or `MIGRATION`):
 ```bash
-npx statuskit migration --to=new.domain.com
+npx @yabrd/statuskit status
 ```
 
-Install both pages:
+### Switch Migration Mode
+Activate domain migration notice (target `--to` domain is required):
 ```bash
-npx statuskit all --to=new.domain.com
+npx @yabrd/statuskit migration --to=new.domain.com
 ```
 
 ### Options

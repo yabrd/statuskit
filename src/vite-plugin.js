@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const PAGES_DIR = path.join(PACKAGE_ROOT, 'pages');
 const ASSETS_DIR = path.join(PACKAGE_ROOT, 'assets');
+const STATE_FILENAME = '.statuskit.json';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -28,6 +29,21 @@ const copyDirRecursive = (src, dest) => {
   }
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
+};
+
+const readState = (baseDir = process.cwd()) => {
+  const primaryPath = path.join(baseDir, STATE_FILENAME);
+  const cwdPath = path.join(process.cwd(), STATE_FILENAME);
+  const targetPath = fs.existsSync(primaryPath) ? primaryPath : (fs.existsSync(cwdPath) ? cwdPath : null);
+
+  if (!targetPath) return null;
+
+  try {
+    const raw = fs.readFileSync(targetPath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 };
 
 export const statuskit = (options = {}) => {
@@ -78,20 +94,38 @@ export const statuskit = (options = {}) => {
       const outPath = path.resolve(process.cwd(), resolvedOutDir);
       if (!fs.existsSync(outPath)) return;
 
+      const state = readState(process.cwd());
+      if (!state || state.status === 'live') {
+        return;
+      }
+
       const destImages = path.join(outPath, 'assets', 'images');
       copyDirRecursive(path.join(ASSETS_DIR, 'images'), destImages);
 
-      ['maintenance.html', 'migration.html'].forEach((filename) => {
-        const srcPath = path.join(PAGES_DIR, filename);
-        if (!fs.existsSync(srcPath)) return;
+      const indexPath = path.join(outPath, 'index.html');
+      const backupPath = path.join(outPath, 'index.app.html');
+
+      if (fs.existsSync(indexPath)) {
+        fs.copyFileSync(indexPath, backupPath);
+      }
+
+      if (state.status === 'maintenance') {
+        const srcPath = path.join(PAGES_DIR, 'maintenance.html');
         let content = fs.readFileSync(srcPath, 'utf8');
         content = content.replaceAll('../assets/images/', 'assets/images/');
-        if (filename === 'migration.html') {
-          if (options.from) content = content.replaceAll('old.example.com', options.from);
-          if (options.to) content = content.replaceAll('new.example.com', options.to);
+        fs.writeFileSync(indexPath, content, 'utf8');
+      } else if (state.status === 'migration') {
+        const srcPath = path.join(PAGES_DIR, 'migration.html');
+        let content = fs.readFileSync(srcPath, 'utf8');
+        content = content.replaceAll('../assets/images/', 'assets/images/');
+        const targetDomain = state.to ?? options.to ?? 'example.com';
+        content = content.replaceAll('new.example.com', targetDomain);
+        const sourceDomain = state.from ?? options.from;
+        if (sourceDomain) {
+          content = content.replaceAll('old.example.com', sourceDomain);
         }
-        fs.writeFileSync(path.join(outPath, filename), content, 'utf8');
-      });
+        fs.writeFileSync(indexPath, content, 'utf8');
+      }
     }
   };
 };

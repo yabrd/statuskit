@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const PAGES_DIR = path.join(PACKAGE_ROOT, 'pages');
 const ASSETS_DIR = path.join(PACKAGE_ROOT, 'assets');
+const STATE_FILENAME = '.statuskit.json';
 
 const DEFAULT_PORT = 3333;
 const MIME_TYPES = {
@@ -34,6 +35,66 @@ const copyFileWithDir = (src, dest) => {
   if (!fs.existsSync(src)) return;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
+};
+
+const readState = (baseDir = process.cwd()) => {
+  const primaryPath = path.join(baseDir, STATE_FILENAME);
+  const cwdPath = path.join(process.cwd(), STATE_FILENAME);
+  const targetPath = fs.existsSync(primaryPath) ? primaryPath : (fs.existsSync(cwdPath) ? cwdPath : null);
+
+  if (!targetPath) return null;
+
+  try {
+    const raw = fs.readFileSync(targetPath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const writeState = (baseDir, stateData) => {
+  const filePath = path.join(baseDir, STATE_FILENAME);
+  const cwdPath = path.join(process.cwd(), STATE_FILENAME);
+  const payload = JSON.stringify(stateData, null, 2);
+
+  try {
+    fs.writeFileSync(filePath, payload, 'utf8');
+    if (filePath !== cwdPath) {
+      fs.writeFileSync(cwdPath, payload, 'utf8');
+    }
+  } catch (error) {
+    process.stderr.write(`\nWarning: Unable to write state file: ${error?.message ?? error}\n\n`);
+  }
+};
+
+const removeState = (baseDir) => {
+  const targetFiles = [
+    path.join(baseDir, STATE_FILENAME),
+    path.join(process.cwd(), STATE_FILENAME)
+  ];
+
+  targetFiles.forEach((file) => {
+    if (fs.existsSync(file)) {
+      try {
+        fs.unlinkSync(file);
+      } catch {}
+    }
+  });
+};
+
+const resolveAppDir = (explicitTarget) => {
+  const cwd = process.cwd();
+  if (explicitTarget) return path.resolve(cwd, explicitTarget);
+
+  const candidates = ['dist', 'public_html', 'public'];
+  for (const candidate of candidates) {
+    const candidatePath = path.join(cwd, candidate);
+    if (fs.existsSync(path.join(candidatePath, 'index.html')) || fs.existsSync(path.join(candidatePath, 'index.app.html'))) {
+      return candidatePath;
+    }
+  }
+
+  return cwd;
 };
 
 const resolveTargetDir = (explicitTarget) => {
@@ -62,9 +123,24 @@ const parseArgs = () => {
 
   const remainingArgs = [];
 
-  if (firstArg === 'maintenance' || firstArg === 'migration' || firstArg === 'all') {
+  if (firstArg === 'down') {
+    options.action = 'down';
+    remainingArgs.push(...rawArgs.slice(1));
+  } else if (firstArg === 'up') {
+    options.action = 'up';
+    remainingArgs.push(...rawArgs.slice(1));
+  } else if (firstArg === 'status') {
+    options.action = 'status';
+    remainingArgs.push(...rawArgs.slice(1));
+  } else if (firstArg === 'migration') {
+    options.action = 'migration';
+    remainingArgs.push(...rawArgs.slice(1));
+  } else if (firstArg === 'maintenance') {
+    options.action = 'down';
+    remainingArgs.push(...rawArgs.slice(1));
+  } else if (firstArg === 'all') {
     options.action = 'install';
-    options.type = firstArg;
+    options.type = 'all';
     remainingArgs.push(...rawArgs.slice(1));
   } else if (firstArg === 'preview') {
     options.action = 'preview';
@@ -105,10 +181,141 @@ const parseArgs = () => {
   return options;
 };
 
+const executeDown = (options) => {
+  const destination = resolveAppDir(options.target);
+  const indexPath = path.join(destination, 'index.html');
+  const backupPath = path.join(destination, 'index.app.html');
+
+  if (!fs.existsSync(indexPath) && !fs.existsSync(backupPath)) {
+    process.stderr.write(`\nError: index.html not found in ${destination}\n\n`);
+    process.exit(1);
+  }
+
+  if (fs.existsSync(backupPath)) {
+    process.stdout.write(`\nNotice: Application is ALREADY in maintenance mode.\nTarget: ${destination}\n\n`);
+    return;
+  }
+
+  fs.copyFileSync(indexPath, backupPath);
+
+  const templatePath = path.join(PAGES_DIR, 'maintenance.html');
+  let content = fs.readFileSync(templatePath, 'utf8');
+  content = content.replaceAll('../assets/images/', 'assets/images/');
+  fs.writeFileSync(indexPath, content, 'utf8');
+
+  const destImagesDir = path.join(destination, 'assets', 'images');
+  fs.mkdirSync(destImagesDir, { recursive: true });
+  ASSET_GROUPS.maintenance.forEach((imgName) => {
+    copyFileWithDir(path.join(ASSETS_DIR, 'images', imgName), path.join(destImagesDir, imgName));
+  });
+
+  writeState(destination, {
+    status: 'maintenance',
+    target: path.relative(process.cwd(), destination) || '.',
+    updatedAt: new Date().toISOString()
+  });
+
+  process.stdout.write(`\n\x1b[32m✓ Application is now in MAINTENANCE mode.\x1b[0m\n`);
+  process.stdout.write(`  Target directory: ${destination}\n`);
+  process.stdout.write(`  index.html -> replaced with Maintenance Page (original backed up to index.app.html)\n`);
+  process.stdout.write(`  Run 'npx @yabrd/statuskit up' to restore the application.\n\n`);
+};
+
+const executeMigration = (options) => {
+  if (!options.to) {
+    process.stderr.write(`\nError: Target domain (--to=<new-domain>) is required for migration mode.\n`);
+    process.stderr.write(`Example: npx @yabrd/statuskit migration --to=sso.muallimin.sch.id\n\n`);
+    process.exit(1);
+  }
+
+  const destination = resolveAppDir(options.target);
+  const indexPath = path.join(destination, 'index.html');
+  const backupPath = path.join(destination, 'index.app.html');
+
+  if (fs.existsSync(indexPath) && !fs.existsSync(backupPath)) {
+    fs.copyFileSync(indexPath, backupPath);
+  }
+
+  const templatePath = path.join(PAGES_DIR, 'migration.html');
+  let content = fs.readFileSync(templatePath, 'utf8');
+  content = content.replaceAll('../assets/images/', 'assets/images/');
+  content = content.replaceAll('new.example.com', options.to);
+  if (options.from) {
+    content = content.replaceAll('old.example.com', options.from);
+  }
+  fs.writeFileSync(indexPath, content, 'utf8');
+
+  const destImagesDir = path.join(destination, 'assets', 'images');
+  fs.mkdirSync(destImagesDir, { recursive: true });
+  ASSET_GROUPS.migration.forEach((imgName) => {
+    copyFileWithDir(path.join(ASSETS_DIR, 'images', imgName), path.join(destImagesDir, imgName));
+  });
+
+  writeState(destination, {
+    status: 'migration',
+    target: path.relative(process.cwd(), destination) || '.',
+    to: options.to,
+    from: options.from ?? null,
+    updatedAt: new Date().toISOString()
+  });
+
+  process.stdout.write(`\n\x1b[32m✓ Application is now in MIGRATION mode.\x1b[0m\n`);
+  process.stdout.write(`  Target directory: ${destination}\n`);
+  process.stdout.write(`  Destination domain: ${options.to}\n`);
+  process.stdout.write(`  Run 'npx @yabrd/statuskit up' to restore original index.html.\n\n`);
+};
+
+const executeUp = (options) => {
+  const destination = resolveAppDir(options.target);
+  const indexPath = path.join(destination, 'index.html');
+  const backupPath = path.join(destination, 'index.app.html');
+
+  if (!fs.existsSync(backupPath)) {
+    removeState(destination);
+    process.stdout.write(`\nNotice: Application is already LIVE (maintenance mode is not active).\nTarget: ${destination}\n\n`);
+    return;
+  }
+
+  fs.copyFileSync(backupPath, indexPath);
+  try {
+    fs.unlinkSync(backupPath);
+  } catch {}
+
+  removeState(destination);
+
+  process.stdout.write(`\n\x1b[32m✓ Application is now LIVE.\x1b[0m\n`);
+  process.stdout.write(`  Target directory: ${destination}\n`);
+  process.stdout.write(`  Original application restored from index.app.html.\n\n`);
+};
+
+const executeStatus = (options) => {
+  const destination = resolveAppDir(options.target);
+  const backupPath = path.join(destination, 'index.app.html');
+  const state = readState(destination);
+
+  process.stdout.write(`\nStatusKit Inspection:\n`);
+  process.stdout.write(`  Target Directory: ${destination}\n`);
+
+  if (!fs.existsSync(backupPath) && (!state || state.status === 'live')) {
+    process.stdout.write(`  Current Status:   \x1b[32mLIVE\x1b[0m (Application is fully operational)\n\n`);
+    return;
+  }
+
+  const currentMode = state?.status?.toUpperCase() ?? 'MAINTENANCE';
+  process.stdout.write(`  Current Status:   \x1b[33m${currentMode}\x1b[0m\n`);
+  if (state?.to) {
+    process.stdout.write(`  Migration Target: ${state.to}\n`);
+  }
+  if (state?.updatedAt) {
+    process.stdout.write(`  Activated At:     ${state.updatedAt}\n`);
+  }
+  process.stdout.write(`  Backup Exists:    ${fs.existsSync(backupPath) ? 'Yes (index.app.html)' : 'No'}\n\n`);
+};
+
 const executeInstall = (options) => {
   if (options.type === 'migration' && !options.to) {
     process.stderr.write(`\nError: Target domain (--to=<new-domain>) is required for migration page.\n`);
-    process.stderr.write(`Example: npx statuskit migration --to=new.domain.com\n\n`);
+    process.stderr.write(`Example: npx @yabrd/statuskit migration --to=new.domain.com\n\n`);
     process.exit(1);
   }
 
@@ -185,39 +392,36 @@ const runInteractive = (options) => {
 StatusKit Setup
 Universal, minimal standby & maintenance pages.
 
-Which page do you want to install?
-  1) Maintenance page
-  2) Migration page
-  3) Both pages
+What would you like to do?
+  1) Activate Maintenance mode (down)
+  2) Restore Application (up)
+  3) Check Current Status (status)
+  4) Install static pages only
 \n`);
 
-  rl.question('Select option [1-3] (default: 1): ', (answer) => {
+  rl.question('Select option [1-4] (default: 1): ', (answer) => {
     const choice = answer.trim();
 
-    if (choice === '2' || choice === '3') {
-      options.type = choice === '2' ? 'migration' : 'all';
-      rl.question('New domain target [e.g. app.newdomain.com] (required): ', (toAnswer) => {
-        const trimmedTo = toAnswer.trim();
-        if (!trimmedTo) {
-          process.stderr.write('\nError: New domain target is required.\n\n');
-          rl.close();
-          process.exit(1);
-        }
-        options.to = trimmedTo;
-
-        rl.question('Old domain [e.g. app.olddomain.com] (optional, press Enter to auto-detect): ', (fromAnswer) => {
-          const trimmedFrom = fromAnswer.trim();
-          if (trimmedFrom) options.from = trimmedFrom;
-          rl.close();
-          executeInstall(options);
-        });
-      });
+    if (choice === '2') {
+      rl.close();
+      executeUp(options);
       return;
     }
 
-    options.type = 'maintenance';
+    if (choice === '3') {
+      rl.close();
+      executeStatus(options);
+      return;
+    }
+
+    if (choice === '4') {
+      rl.close();
+      executeInstall(options);
+      return;
+    }
+
     rl.close();
-    executeInstall(options);
+    executeDown(options);
   });
 };
 
@@ -278,16 +482,16 @@ const runPreview = (options) => {
 const showHelp = () => {
   process.stdout.write(`
 StatusKit CLI
-Universal, lightweight maintenance & migration pages for web applications.
+Universal, lightweight maintenance & migration state engine for web applications.
 
 Usage:
-  npx statuskit [command] [options]
+  npx @yabrd/statuskit [command] [options]
 
 Commands:
-  (no args)             Interactive wizard to install selected pages
-  maintenance [dir]     Install maintenance page and cable assets (default: ./public)
-  migration [dir]       Install migration page and diagram assets (default: ./public)
-  all [dir]             Install both maintenance & migration pages
+  down [dir]            Activate MAINTENANCE mode (swaps index.html -> maintenance)
+  up [dir]              Deactivate maintenance and restore original application
+  status [dir]          Inspect current application status (LIVE, MAINTENANCE, MIGRATION)
+  migration [dir]       Activate MIGRATION mode (--to=<domain> is required)
   preview               Start local server to preview pages in browser
   help                  Show this help message
 
@@ -298,11 +502,11 @@ Options:
   --port=<port>         Set custom port for preview (default: 3333)
 
 Examples:
-  npx statuskit
-  npx statuskit maintenance
-  npx statuskit migration --to=new.app.com
-  npx statuskit migration ./public --from=old.app.com --to=new.app.com
-  npx statuskit preview
+  npx @yabrd/statuskit down
+  npx @yabrd/statuskit up
+  npx @yabrd/statuskit status
+  npx @yabrd/statuskit migration --to=sso.muallimin.sch.id
+  npx @yabrd/statuskit preview
 \n`);
 };
 
@@ -311,6 +515,26 @@ const main = () => {
 
   if (options.action === 'interactive') {
     runInteractive(options);
+    return;
+  }
+
+  if (options.action === 'down') {
+    executeDown(options);
+    return;
+  }
+
+  if (options.action === 'up') {
+    executeUp(options);
+    return;
+  }
+
+  if (options.action === 'status') {
+    executeStatus(options);
+    return;
+  }
+
+  if (options.action === 'migration') {
+    executeMigration(options);
     return;
   }
 
