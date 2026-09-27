@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Migration</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #000000;
+      --text: #ffffff;
+      --desc: #a3a3a3;
+    }
+
+    [data-theme="light"] {
+      --bg: #ffffff;
+      --text: #000000;
+      --desc: #666666;
+    }
+
+    html {
+      width: 100%;
+      min-height: 100%;
+    }
+
+    body {
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      padding: 3rem 0;
+      overflow-x: hidden;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border: none;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      cursor: pointer;
+      z-index: 50;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .sun-icon {
+      display: none;
+    }
+
+    .moon-icon {
+      display: block;
+    }
+
+    [data-theme="light"] .sun-icon {
+      display: block;
+    }
+
+    [data-theme="light"] .moon-icon {
+      display: none;
+    }
+
+    .main-wrapper {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .section-top {
+      width: 100%;
+      max-width: 760px;
+      padding: 0 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(2.15rem, 7.5vw, 4.75rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .sub-title {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      font-weight: 500;
+      color: var(--desc);
+      line-height: 1.5;
+    }
+
+    .section-image {
+      width: 100vw;
+      height: clamp(200px, 30vw, 340px);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 3.5rem 0;
+    }
+
+    .diagram-img {
+      width: auto;
+      max-width: min(92vw, 840px);
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .img-dark {
+      display: block;
+    }
+
+    .img-light {
+      display: none;
+    }
+
+    [data-theme="light"] .img-dark {
+      display: none;
+    }
+
+    [data-theme="light"] .img-light {
+      display: block;
+    }
+
+    .section-bottom {
+      width: 100%;
+      max-width: 680px;
+      padding: 0 1.5rem;
+    }
+
+    .desc-long {
+      font-size: clamp(0.95rem, 2.2vw, 1.1rem);
+      font-weight: 400;
+      line-height: 1.8;
+      color: var(--desc);
+    }
+
+    .desc-long a {
+      color: inherit;
+      font-weight: inherit;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    @media (max-width: 768px) {
+      .section-image {
+        margin: 2.75rem 0 3.25rem;
+        height: clamp(180px, 36vw, 260px);
+      }
+      .diagram-img {
+        max-width: 90vw;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 2.5rem 0;
+      }
+      .section-top,
+      .section-bottom {
+        padding: 0 1.25rem;
+      }
+      .section-image {
+        margin: 2.5rem 0 3rem;
+        height: clamp(160px, 48vw, 220px);
+      }
+      .diagram-img {
+        max-width: 95vw;
+      }
+      h1 {
+        font-size: 2.75rem;
+      }
+      .sub-title {
+        font-size: 1.25rem;
+      }
+      .desc-long {
+        font-size: 1.15rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+    </svg>
+  </button>
+
+  <main class="main-wrapper">
+    <header class="section-top">
+      <h1>MIGRATION</h1>
+      <p class="sub-title">This service has permanently migrated to a new official domain.</p>
+    </header>
+
+    <section class="section-image">
+      <img src="../assets/images/migration-dark.webp" alt="Migration" class="diagram-img img-dark" />
+      <img src="../assets/images/migration-light.webp" alt="Migration" class="diagram-img img-light" />
+    </section>
+
+    <footer class="section-bottom">
+      <p class="desc-long">The service has moved from <span id="fromDomain">old.example.com</span> to <span id="toDomain">new.example.com</span>. Please update your bookmarks and visit the new address at <a id="toDomainLink" href="https://new.example.com">new.example.com</a>.</p>
+    </footer>
+  </main>
+
+  <script>
+    const themeBtn = document.getElementById('themeToggle');
+    const doc = document.documentElement;
+
+    const getPreferredTheme = () => {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    };
+
+    doc.setAttribute('data-theme', getPreferredTheme());
+
+    themeBtn.addEventListener('click', () => {
+      const current = doc.getAttribute('data-theme') || 'dark';
+      const target = current === 'dark' ? 'light' : 'dark';
+      doc.setAttribute('data-theme', target);
+      localStorage.setItem('theme', target);
+    });
+
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('theme')) {
+        doc.setAttribute('data-theme', e.matches ? 'light' : 'dark');
+      }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromParam = urlParams.get('from');
+    const toParam = urlParams.get('to');
+
+    const fromEl = document.getElementById('fromDomain');
+    if (fromParam) {
+      if (fromEl) fromEl.textContent = fromParam;
+    } else if (fromEl && (fromEl.textContent === 'old.example.com' || !fromEl.textContent.trim())) {
+      const currentHost = window.location.hostname;
+      if (currentHost && currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
+        fromEl.textContent = currentHost;
+      }
+    }
+
+    if (toParam) {
+      const toEl = document.getElementById('toDomain');
+      const toLink = document.getElementById('toDomainLink');
+      if (toEl) toEl.textContent = toParam;
+      if (toLink) {
+        toLink.textContent = toParam;
+        toLink.href = toParam.startsWith('http://') || toParam.startsWith('https://') ? toParam : `https://${toParam}`;
+      }
+    }
+  </script>
+</body>
+</html>

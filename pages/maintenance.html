@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Under Maintenance</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #000000;
+      --text: #ffffff;
+      --desc: #a3a3a3;
+    }
+
+    [data-theme="light"] {
+      --bg: #ffffff;
+      --text: #000000;
+      --desc: #666666;
+    }
+
+    html {
+      width: 100%;
+      min-height: 100%;
+    }
+
+    body {
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      padding: 3rem 0;
+      overflow-x: hidden;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border: none;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      cursor: pointer;
+      z-index: 50;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .sun-icon {
+      display: none;
+    }
+
+    .moon-icon {
+      display: block;
+    }
+
+    [data-theme="light"] .sun-icon {
+      display: block;
+    }
+
+    [data-theme="light"] .moon-icon {
+      display: none;
+    }
+
+    .main-wrapper {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .section-top {
+      width: 100%;
+      max-width: 760px;
+      padding: 0 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(2.15rem, 7.5vw, 4.75rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .sub-title {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      font-weight: 500;
+      color: var(--desc);
+      line-height: 1.5;
+    }
+
+    .section-image {
+      width: 100vw;
+      height: clamp(95px, 13vw, 150px);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 3.5rem 0;
+    }
+
+    .cable-img {
+      width: 100vw;
+      min-width: 1100px;
+      height: auto;
+      flex-shrink: 0;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+      transform: translateX(15px) scale(1.15);
+      transform-origin: center center;
+    }
+
+    .img-dark {
+      display: block;
+    }
+
+    .img-light {
+      display: none;
+    }
+
+    [data-theme="light"] .img-dark {
+      display: none;
+    }
+
+    [data-theme="light"] .img-light {
+      display: block;
+    }
+
+    .section-bottom {
+      width: 100%;
+      max-width: 680px;
+      padding: 0 1.5rem;
+    }
+
+    .desc-long {
+      font-size: clamp(0.95rem, 2.2vw, 1.1rem);
+      font-weight: 400;
+      line-height: 1.8;
+      color: var(--desc);
+    }
+
+    @media (max-width: 768px) {
+      .section-image {
+        margin: 2.75rem 0 3.25rem;
+        height: 120px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 2.5rem 0;
+      }
+      .section-top,
+      .section-bottom {
+        padding: 0 1.25rem;
+      }
+      .section-image {
+        margin: 3rem 0 3.75rem;
+        height: 110px;
+      }
+      h1 {
+        font-size: 2.75rem;
+      }
+      .sub-title {
+        font-size: 1.25rem;
+      }
+      .desc-long {
+        font-size: 1.15rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+    </svg>
+    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+    </svg>
+  </button>
+
+  <main class="main-wrapper">
+    <header class="section-top">
+      <h1>MAINTENANCE</h1>
+      <p class="sub-title">The system is currently unavailable due to scheduled maintenance.</p>
+    </header>
+
+    <section class="section-image">
+      <img src="../assets/images/maintenance-dark.webp" alt="Maintenance" class="cable-img img-dark" />
+      <img src="../assets/images/maintenance-light.webp" alt="Maintenance" class="cable-img img-light" />
+    </section>
+
+    <footer class="section-bottom">
+      <p class="desc-long">We apologize for the inconvenience. We are performing scheduled infrastructure maintenance to enhance system performance and stability. Normal service will resume shortly.</p>
+    </footer>
+  </main>
+
+  <script>
+    const themeBtn = document.getElementById('themeToggle');
+    const doc = document.documentElement;
+
+    const getPreferredTheme = () => {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    };
+
+    doc.setAttribute('data-theme', getPreferredTheme());
+
+    themeBtn.addEventListener('click', () => {
+      const current = doc.getAttribute('data-theme') || 'dark';
+      const target = current === 'dark' ? 'light' : 'dark';
+      doc.setAttribute('data-theme', target);
+      localStorage.setItem('theme', target);
+    });
+
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('theme')) {
+        doc.setAttribute('data-theme', e.matches ? 'light' : 'dark');
+      }
+    });
+  </script>
+</body>
+</html>
