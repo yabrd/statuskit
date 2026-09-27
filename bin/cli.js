@@ -191,18 +191,21 @@ const executeDown = (options) => {
   const destination = resolveAppDir(options.target);
   const indexPath = path.join(destination, 'index.html');
   const backupPath = path.join(destination, 'index.app.html');
+  const state = readState(destination);
 
   if (!fs.existsSync(indexPath) && !fs.existsSync(backupPath)) {
     process.stderr.write(`\nError: index.html not found in ${destination}\n\n`);
     process.exit(1);
   }
 
-  if (fs.existsSync(backupPath)) {
+  if (fs.existsSync(backupPath) && state?.status === 'maintenance') {
     process.stdout.write(`\nNotice: Application is ALREADY in maintenance mode.\nTarget: ${destination}\n\n`);
     return;
   }
 
-  fs.copyFileSync(indexPath, backupPath);
+  if (fs.existsSync(indexPath) && !fs.existsSync(backupPath)) {
+    fs.copyFileSync(indexPath, backupPath);
+  }
 
   const templatePath = path.join(PAGES_DIR, 'maintenance.html');
   let content = fs.readFileSync(templatePath, 'utf8');
@@ -237,6 +240,12 @@ const executeMigration = (options) => {
   const destination = resolveAppDir(options.target);
   const indexPath = path.join(destination, 'index.html');
   const backupPath = path.join(destination, 'index.app.html');
+  const state = readState(destination);
+
+  if (fs.existsSync(backupPath) && state?.status === 'migration' && state?.to === options.to) {
+    process.stdout.write(`\nNotice: Application is ALREADY in migration mode to ${options.to}.\nTarget: ${destination}\n\n`);
+    return;
+  }
 
   if (fs.existsSync(indexPath) && !fs.existsSync(backupPath)) {
     fs.copyFileSync(indexPath, backupPath);
