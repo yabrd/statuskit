@@ -1,5 +1,5 @@
 {
-  "name": "statuskit",
+  "name": "@yabrd/statuskit",
   "version": "1.0.0",
   "description": "Minimalist, universal standby, maintenance, and migration status pages with dark and light mode.",
   "type": "module",
