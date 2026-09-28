@@ -46,6 +46,25 @@ const readState = (baseDir = process.cwd()) => {
   }
 };
 
+const renderTemplate = (pageName, state, options) => {
+  const filePath = path.join(PAGES_DIR, pageName);
+  if (!fs.existsSync(filePath)) return null;
+
+  let html = fs.readFileSync(filePath, 'utf8');
+  html = html.replaceAll('../assets/images/', '/assets/images/');
+
+  if (pageName === 'migration.html') {
+    const targetDomain = state?.to ?? options.to ?? 'example.com';
+    html = html.replaceAll('new.example.com', targetDomain);
+    const sourceDomain = state?.from ?? options.from;
+    if (sourceDomain) {
+      html = html.replaceAll('old.example.com', sourceDomain);
+    }
+  }
+
+  return html;
+};
+
 export const statuskit = (options = {}) => {
   let resolvedOutDir = 'dist';
 
@@ -58,17 +77,12 @@ export const statuskit = (options = {}) => {
       server.middlewares.use((req, res, next) => {
         const url = new URL(req.url, 'http://localhost');
         const pathname = url.pathname;
+        const state = readState(process.cwd());
 
         if (pathname === '/maintenance.html' || pathname === '/migration.html') {
           const pageName = pathname.slice(1);
-          const filePath = path.join(PAGES_DIR, pageName);
-          if (fs.existsSync(filePath)) {
-            let html = fs.readFileSync(filePath, 'utf8');
-            html = html.replaceAll('../assets/images/', '/assets/images/');
-            if (pageName === 'migration.html') {
-              if (options.from) html = html.replaceAll('old.example.com', options.from);
-              if (options.to) html = html.replaceAll('new.example.com', options.to);
-            }
+          const html = renderTemplate(pageName, state, options);
+          if (html) {
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(html);
             return;
@@ -84,6 +98,22 @@ export const statuskit = (options = {}) => {
             res.writeHead(200, { 'Content-Type': contentType });
             fs.createReadStream(assetPath).pipe(res);
             return;
+          }
+        }
+
+        if (state && (state.status === 'maintenance' || state.status === 'migration')) {
+          const acceptHeader = req.headers.accept ?? '';
+          const hasExtension = Boolean(path.extname(pathname));
+          const isHtmlRequest = req.method === 'GET' && (acceptHeader.includes('text/html') || !hasExtension);
+
+          if (isHtmlRequest && !pathname.startsWith('/api')) {
+            const pageName = state.status === 'maintenance' ? 'maintenance.html' : 'migration.html';
+            const html = renderTemplate(pageName, state, options);
+            if (html) {
+              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+              res.end(html);
+              return;
+            }
           }
         }
 
@@ -112,12 +142,12 @@ export const statuskit = (options = {}) => {
       if (state.status === 'maintenance') {
         const srcPath = path.join(PAGES_DIR, 'maintenance.html');
         let content = fs.readFileSync(srcPath, 'utf8');
-        content = content.replaceAll('../assets/images/', 'assets/images/');
+        content = content.replaceAll('../assets/images/', '/assets/images/');
         fs.writeFileSync(indexPath, content, 'utf8');
       } else if (state.status === 'migration') {
         const srcPath = path.join(PAGES_DIR, 'migration.html');
         let content = fs.readFileSync(srcPath, 'utf8');
-        content = content.replaceAll('../assets/images/', 'assets/images/');
+        content = content.replaceAll('../assets/images/', '/assets/images/');
         const targetDomain = state.to ?? options.to ?? 'example.com';
         content = content.replaceAll('new.example.com', targetDomain);
         const sourceDomain = state.from ?? options.from;

@@ -157,7 +157,7 @@ const executeDown = (options) => {
 
   const templatePath = path.join(PAGES_DIR, 'maintenance.html');
   let content = fs.readFileSync(templatePath, 'utf8');
-  content = content.replaceAll('../assets/images/', 'assets/images/');
+  content = content.replaceAll('../assets/images/', '/assets/images/');
   fs.writeFileSync(indexPath, content, 'utf8');
 
   const destImagesDir = path.join(destination, 'assets', 'images');
@@ -201,7 +201,7 @@ const executeMigration = (options) => {
 
   const templatePath = path.join(PAGES_DIR, 'migration.html');
   let content = fs.readFileSync(templatePath, 'utf8');
-  content = content.replaceAll('../assets/images/', 'assets/images/');
+  content = content.replaceAll('../assets/images/', '/assets/images/');
   content = content.replaceAll('new.example.com', options.to);
   if (options.from) {
     content = content.replaceAll('old.example.com', options.from);
